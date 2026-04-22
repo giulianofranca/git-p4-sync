@@ -5,34 +5,22 @@ on:
     types: [closed]
 
 jobs:
-  debug:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Debug context
-        run: |
-          echo "action: ${{ github.event.action }}"
-          echo "merged: ${{ github.event.pull_request.merged }}"
-          echo "base_ref: ${{ github.base_ref }}"
-          echo "main branch var: ${{ vars.P4_MAIN_BRANCH_NAME }}"
-          echo "dev branch var: ${{ vars.P4_DEV_BRANCH_NAME }}"
-
   sync:
     if: |
-      github.event.name == 'pull_request' &&
       github.event.action == 'closed' &&
       github.event.pull_request.merged == true &&
-      (github.event.pull_request.base_ref == vars.P4_MAIN_BRANCH_NAME ||
-      github.event.pull_request.base_ref == vars.P4_DEV_BRANCH_NAME)
+      (github.base_ref == 'main' || github.base_ref == 'dev')
 
     runs-on: ubuntu-latest
 
-    env:
-      P4_STREAM_DEPOT: ${{ vars.P4_STREAM_DEPOT }}  # Name of the stream depot to sync to.
-      P4_MAIN_BRANCH_NAME: ${{ vars.P4_MAIN_BRANCH_NAME }}  # Name of the main branch.
-      P4_DEV_BRANCH_NAME: ${{ vars.P4_DEV_BRANCH_NAME }}  # Name of the dev branch.
-
     steps:
+      - name: Set config variables
+        id: config
+        run: |
+          echo "main_branch=main" >> $GITHUB_OUTPUT
+          echo "dev_branch=dev" >> $GITHUB_OUTPUT
+          echo "p4_stream_depot=${{ vars.P4_STREAM_DEPOT }}" >> $GITHUB_OUTPUT
+
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
@@ -42,7 +30,7 @@ jobs:
         run: |
           sudo apt-get install git -y
           curl -fsSL https://filehost.perforce.com/perforce/r25.2/bin.linux26x86_64/p4 \
-            -o /usr/local/p4
+            -o /usr/local/bin/p4
           chmod +x /usr/local/bin/p4
 
       - name: Configure P4 credentials
@@ -59,10 +47,10 @@ jobs:
         id: p4path
         run: |
           BRANCH="${{ github.base_ref }}"
-          if [ "$BRANCH" = "${{ env.P4_MAIN_BRANCH_NAME }}" ]; then
-            echo "path=//${{ env.P4_STREAM_DEPOT }}/${{ env.P4_MAIN_BRANCH_NAME }}" >> $GITHUB_OUTPUT
-          elif [ "$BRANCH" = "${{ env.P4_DEV_BRANCH_NAME }}" ]; then
-            echo "path=//${{ env.P4_STREAM_DEPOT }}/${{ env.P4_DEV_BRANCH_NAME }}" >> $GITHUB_OUTPUT
+          if [ "$BRANCH" = "${{ steps.config.outputs.main_branch }}" ]; then
+            echo "path=//${{ steps.config.outputs.p4_stream_depot }}/${{ steps.config.outputs.main_branch }}" >> $GITHUB_OUTPUT
+          elif [ "$BRANCH" = "${{ steps.config.outputs.dev_branch }}" ]; then
+            echo "path=//${{ steps.config.outputs.p4_stream_depot }}/${{ steps.config.outputs.dev_branch }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Sync Git to Perforce
