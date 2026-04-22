@@ -5,6 +5,18 @@ on:
     types: [closed]
 
 jobs:
+  debug:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Debug context
+        run: |
+          echo "action: ${{ github.event.action }}"
+          echo "merged: ${{ github.event.pull_request.merged }}"
+          echo "base_ref: ${{ github.base_ref }}"
+          echo "main branch var: ${{ vars.P4_MAIN_BRANCH_NAME }}"
+          echo "dev branch var: ${{ vars.P4_DEV_BRANCH_NAME }}"
+
   sync:
     if: |
       github.event.name == 'pull_request' &&
