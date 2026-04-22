@@ -3,16 +3,21 @@ name: CI
 on:
   pull_request:
     types: [closed]
-    branches: [main]
 
 jobs:
-
   sync:
-    if: github.even.pull_request.merged == true
+    if: |
+      github.event.name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      (github.event.pull_request.base_ref == vars.P4_MAIN_BRANCH_NAME ||
+      github.event.pull_request.base_ref == vars.P4_DEV_BRANCH_NAME)
+
     runs-on: ubuntu-latest
 
     env:
       P4_STREAM_DEPOT: ${{ vars.P4_STREAM_DEPOT }}  # Name of the stream depot to sync to.
+      P4_MAIN_BRANCH_NAME: ${{ vars.P4_MAIN_BRANCH_NAME }}  # Name of the main branch.
       P4_DEV_BRANCH_NAME: ${{ vars.P4_DEV_BRANCH_NAME }}  # Name of the dev branch.
 
     steps:
@@ -35,17 +40,17 @@ jobs:
           P4PASSWD: ${{ secrets.P4PASSWD }}
           P4CLIENT: ${{ secrets.P4CLIENT }}
         run: |
-          p4 login -p <<< "$P4PASSWD"
           p4 trust -y
+          p4 login -p <<< "$P4PASSWD"
 
       - name: Determine target P4 path
         id: p4path
         run: |
           BRANCH="${{ github.base_ref }}"
-          if [ "$BRANCH" = "main" ]; then
-            echo "path=//${{ env.P4_STREAM_DEPOT }}/main" >> $GITHUB_OUTPUT
-          elif [ "$BRANCH" = "${{ env.P4_STREAM_DEPOT }}" ]; then
-            echo "path=//${{ env.P4_STREAM_DEPOT }}/${{ env.P4_STREAM_DEPOT }}" >> $GITHUB_OUTPUT
+          if [ "$BRANCH" = "${{ env.P4_MAIN_BRANCH_NAME }}" ]; then
+            echo "path=//${{ env.P4_STREAM_DEPOT }}/${{ env.P4_MAIN_BRANCH_NAME }}" >> $GITHUB_OUTPUT
+          elif [ "$BRANCH" = "${{ env.P4_DEV_BRANCH_NAME }}" ]; then
+            echo "path=//${{ env.P4_STREAM_DEPOT }}/${{ env.P4_DEV_BRANCH_NAME }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Sync Git to Perforce
@@ -53,8 +58,9 @@ jobs:
           P4PORT:   ${{ secrets.P4PORT }}
           P4USER:   ${{ secrets.P4USER }}
           P4CLIENT: ${{ secrets.P4CLIENT }}
+          GIT_P4_DEPOT_PATH: ${{ steps.p4path.outputs.path }}/...
+          GIT_P4_ORIGIN: origin/${{ github.base_ref }}
         run: |
           git config git-p4.skipSubmitEdit true
-          git p4 submit \
-            --origin "origin/${{ github.base_ref }}" \
-            --depot-path "${{ steps.p4path.outputs.path }}/..."
+          git config git-p4.depotPath "$GIT_P4_DEPOT_PATH"
+          git p4 submit --origin "$GIT_P4_ORIGIN"
