@@ -39,8 +39,9 @@ jobs:
           P4USER:   ${{ secrets.P4USER }}
           P4PASSWD: ${{ secrets.P4PASSWD }}
           P4CLIENT: ${{ secrets.P4CLIENT }}
+          P4FINGERPRINT: ${{ secrets.P4FINGERPRINT }}
         run: |
-          p4 trust -f -y
+          p4 trust -f -i "$P4FINGERPRINT"
           p4 login -p <<< "$P4PASSWD"
 
       - name: Determine target P4 path
