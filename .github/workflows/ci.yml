@@ -40,7 +40,7 @@ jobs:
           P4PASSWD: ${{ secrets.P4PASSWD }}
           P4CLIENT: ${{ secrets.P4CLIENT }}
         run: |
-          p4 trust -y
+          p4 trust -f -y
           p4 login -p <<< "$P4PASSWD"
 
       - name: Determine target P4 path
