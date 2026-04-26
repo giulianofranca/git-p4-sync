@@ -1,6 +1,6 @@
 # GitP4SyncTemplate
 
-> Template to auto-sync a GitHub repository with a Perforce depot using GitHub Actions
+> Template to auto-sync a GitHub repository with a Perforce P4 depot using GitHub Actions
 
 [![Status](https://img.shields.io/badge/status-in%20development-yellow)]()
 [![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/giulianofranca/GitP4SyncTemplate/actions)
